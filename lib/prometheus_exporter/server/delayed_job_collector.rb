@@ -13,6 +13,7 @@ module PrometheusExporter::Server
       @delayed_job_attempts_summary = nil
       @delayed_jobs_enqueued = nil
       @delayed_jobs_pending = nil
+      @delayed_jobs_overdue = nil
     end
 
     def type
@@ -48,6 +49,7 @@ module PrometheusExporter::Server
       @delayed_job_attempts_summary.observe(obj["attempts"], counter_labels) if obj["success"]
       @delayed_jobs_enqueued.observe(obj["enqueued"], gauge_labels)
       @delayed_jobs_pending.observe(obj["pending"], gauge_labels)
+      @delayed_jobs_overdue.observe(obj["overdue"], gauge_labels)
     end
 
     def metrics
@@ -62,6 +64,7 @@ module PrometheusExporter::Server
           @delayed_job_attempts_summary,
           @delayed_jobs_enqueued,
           @delayed_jobs_pending,
+          @delayed_jobs_overdue,
         ]
       else
         []
@@ -100,6 +103,12 @@ module PrometheusExporter::Server
           PrometheusExporter::Metric::Gauge.new(
             "delayed_jobs_pending",
             "Number of pending delayed jobs.",
+          )
+
+        @delayed_jobs_overdue =
+          PrometheusExporter::Metric::Gauge.new(
+            "delayed_jobs_overdue",
+            "Number of overdue delayed jobs.",
           )
 
         @delayed_failed_jobs_total =

@@ -17,11 +17,14 @@ module PrometheusExporter::Instrumentation
                 enqueued_count = Delayed::Job.where(queue: job.queue).count
                 pending_count =
                   Delayed::Job.where(attempts: 0, locked_at: nil, queue: job.queue).count
+                overdue_count =
+                  Delayed::Job.where(attempts: 0, locked_at: nil, queue: job.queue).where("run_at < ?", Time.current).count
                 instrumenter.call(
                   job,
                   max_attempts,
                   enqueued_count,
                   pending_count,
+                  overdue_count,
                   include_module_name,
                   *args,
                   &block
@@ -38,7 +41,7 @@ module PrometheusExporter::Instrumentation
       @client = client || PrometheusExporter::Client.default
     end
 
-    def call(job, max_attempts, enqueued_count, pending_count, include_module_name, *args, &block)
+    def call(job, max_attempts, enqueued_count, pending_count, overdue_count, include_module_name, *args, &block)
       success = false
       job_name = job.handler.to_s.match(JOB_CLASS_REGEXP).to_a[include_module_name ? 1 : 2].to_s
       job_name ||= job.try(:name)
@@ -62,6 +65,7 @@ module PrometheusExporter::Instrumentation
         max_attempts: max_attempts,
         enqueued: enqueued_count,
         pending: pending_count,
+        overdue: overdue_count,
       )
     end
   end
